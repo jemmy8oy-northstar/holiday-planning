@@ -44,13 +44,23 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04-arm  # Native ARM64 runner — no QEMU emulation overhead
 
     steps:
+      # --- 1. GENERATE SHORT-LIVED GITOPS BOT TOKEN ---
+      - name: Generate GitOps Token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.GIT_OPS_APP_ID }} # Pulled from global Org variables
+          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }} # Pulled from global Org secrets
+
+      # --- 2. CHECKOUT CODE USING THE APP TOKEN ---
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Required for GitVersion to read full git history
+          token: ${{ steps.app-token.outputs.token }} # 🔑 Overrides the restricted default token
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v1
@@ -71,6 +81,21 @@ jobs:
           username: ${{ secrets.OCIR_USERNAME }}
           password: ${{ secrets.OCIR_AUTH_TOKEN }}
 
+      # --- 3. BUILD & PUSH BACKEND ---
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ env.BACKEND_IMAGE }}:latest
+            ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ env.BACKEND_IMAGE }}:${{ steps.gitversion.outputs.semVer }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      # --- 4. BUILD & PUSH FRONTEND ---
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
         with:
@@ -84,15 +109,32 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
-      - name: Build and push Backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          provenance: false
-          sbom: false
-          tags: |
-            ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ env.BACKEND_IMAGE }}:latest
-            ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ env.BACKEND_IMAGE }}:${{ steps.gitversion.outputs.semVer }}
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
+      # --- 5. THE GITOPS AUTO-UPDATE LOOP ---
+      - name: Install yq (YAML Processor)
+        uses: mikefarah/yq@v4.44.1
+
+      - name: Update Helm Chart Values File
+        run: |
+          NEW_VERSION="${{ steps.gitversion.outputs.semVer }}"
+          VALUES_FILE="helm/values.yaml"
+          
+          echo "Patching array image tags in $VALUES_FILE to version: $NEW_VERSION"
+          
+          yq -i '(.apps[] | select(.name == "backend") | .image.tag) = "'"$NEW_VERSION"'"' $VALUES_FILE
+          yq -i '(.apps[] | select(.name == "frontend") | .image.tag) = "'"$NEW_VERSION"'"' $VALUES_FILE
+
+      - name: Commit and Push Image Tag Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add helm/values.yaml
+          
+          if git diff --staged --quiet; then
+            echo "No manifest changes required. Version is already up to date."
+          else
+            git commit -m "chore(gitops): release version ${{ steps.gitversion.outputs.semVer }} [skip ci]"
+            
+            # This cleanly pushes back using the App token set during checkout
+            git push origin HEAD
+          fi

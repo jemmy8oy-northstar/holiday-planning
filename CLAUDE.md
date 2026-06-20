@@ -117,6 +117,7 @@ If you want a plan or have a question, just ask. If you want implementation, say
 ## GitHub Conventions
 
 - **Branch target**: All PRs target `dev`. Never target `main` — `dev` → `main` is a human-only action.
+- **Never push directly**: Claude must never `git push` directly to `dev` or `main`. All changes must go through a PR, even if branch protection is not enforced.
 - **PR assignment**: Every PR Claude raises must be assigned to the repo owner.
 - **Issue assignment**: Every issue Claude acts on must be assigned to the repo owner.
 - **Issue linking**: Every PR body must include `Closes #N`. Claude also comments on the issue: *🤖 PR raised: #N — please review when ready.*

@@ -14,7 +14,7 @@ const Hero: React.FC = () => {
                 WebkitTextFillColor: 'transparent',
                 lineHeight: 1.1
             }}>
-                Your App Name
+                Holiday Planning
             </h1>
             <p style={{
                 fontSize: 'clamp(1.1rem, 2vw, 1.4rem)',

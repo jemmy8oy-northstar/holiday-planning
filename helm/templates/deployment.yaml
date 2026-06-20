@@ -10,10 +10,12 @@ spec:
   selector:
     matchLabels:
       app: {{ .name }}
+      release: {{ include "app.fullname" $ }}
   template:
     metadata:
       labels:
         app: {{ .name }}
+        release: {{ include "app.fullname" $ }}
     spec:
       containers:
         - name: {{ .name }}

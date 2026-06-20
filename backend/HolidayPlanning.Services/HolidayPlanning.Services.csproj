@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../HolidayPlanning.DomainModels/HolidayPlanning.DomainModels.csproj" />
+    <ProjectReference Include="../HolidayPlanning.Abstractions/HolidayPlanning.Abstractions.csproj" />
+    <ProjectReference Include="../HolidayPlanning.Database/HolidayPlanning.Database.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="16.0.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <EnableDefaultResourceItems>false</EnableDefaultResourceItems>    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

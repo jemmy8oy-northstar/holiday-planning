@@ -1,0 +1,95 @@
+name: Build and Push Docker Images to OCIR
+
+# Triggered manually only. To also deploy on every merge to main, add:
+#   push:
+#     branches:
+#       - main
+# to the `on:` block below.
+#
+# This template targets OCI Container Registry with ARM64 images (for OKE free tier).
+#
+# Required GitHub repository variables (Settings → Secrets and variables → Variables):
+#   OCIR_REGISTRY    e.g. lhr.ocir.io
+#   OCIR_NAMESPACE   e.g. your-tenancy-namespace
+#
+# Required GitHub repository secrets (Settings → Secrets and variables → Secrets):
+#   OCIR_USERNAME    e.g. your-tenancy/oracleidentitycloudservice/your@email.com
+#   OCIR_AUTH_TOKEN  OCI auth token (not your account password)
+#
+# Image names are controlled by the FRONTEND_IMAGE and BACKEND_IMAGE env vars below.
+# They must match the image paths configured in helm/values.yaml.
+#
+# ARM64 runner note:
+#   This workflow uses ubuntu-24.04-arm — a native ARM64 GitHub-hosted runner.
+#   This avoids QEMU emulation overhead and is available on PUBLIC repositories for free.
+#   For PRIVATE repositories, ubuntu-24.04-arm requires a paid plan.
+#   If you are on a private repo, replace the runner with:
+#     runs-on: ubuntu-latest
+#   and add a QEMU setup step before Docker Buildx:
+#     - name: Set up QEMU
+#       uses: docker/setup-qemu-action@v3
+#       with:
+#         platforms: arm64
+#   then add `platforms: linux/arm64` to both build-push steps.
+
+on:
+  workflow_dispatch:
+
+env:
+  FRONTEND_IMAGE: your-app-frontend   # Replace with your image name
+  BACKEND_IMAGE: your-app-backend     # Replace with your image name
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for GitVersion to read full git history
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v1
+        with:
+          versionSpec: "5.x"
+
+      - name: Determine version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Oracle Container Image Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.OCIR_REGISTRY }}
+          username: ${{ secrets.OCIR_USERNAME }}
+          password: ${{ secrets.OCIR_AUTH_TOKEN }}
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ env.FRONTEND_IMAGE }}:latest
+            ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ env.FRONTEND_IMAGE }}:${{ steps.gitversion.outputs.semVer }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ env.BACKEND_IMAGE }}:latest
+            ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ env.BACKEND_IMAGE }}:${{ steps.gitversion.outputs.semVer }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend

@@ -1,0 +1,4 @@
+/* Styles specific to the App layout */
+.app-container {
+  overflow-x: hidden;
+}

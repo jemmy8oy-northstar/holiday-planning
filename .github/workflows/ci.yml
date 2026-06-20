@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["**"]
+
+# Public repos: ubuntu-latest runs are unlimited — keep this workflow as-is.
+# Private repos: runs count against the 2,000 free minutes/month on GitHub Free.
+# If that's a concern, delete this file or disable it in Settings → Actions → General.
+
+jobs:
+  backend:
+    name: Build backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore ./backend
+
+      - name: Build
+        run: dotnet build ./backend --no-restore --configuration Release
+
+  frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+        working-directory: ./frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: ./frontend

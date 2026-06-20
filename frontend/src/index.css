@@ -1,0 +1,224 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Outfit:wght@500;700;800&display=swap');
+
+:root {
+  /* Common - Brand Colors */
+  --accent-primary: #6366f1;
+  --accent-secondary: #a855f7;
+
+  /* Typography */
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', var(--font-main);
+
+  /* Transitions */
+  --theme-transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, background 0.4s ease;
+}
+
+/* Dark Theme (Default) */
+[data-theme='dark'] {
+  --bg-page: #0a0a0c;
+  --bg-card: rgba(255, 255, 255, 0.05);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-hover-bg: rgba(255, 255, 255, 0.08);
+  --gradient-opacity: 0.15;
+}
+
+/* Light Theme */
+[data-theme='light'] {
+  --bg-page: #f8fafc;
+  --bg-card: rgba(0, 0, 0, 0.03);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-hover-bg: rgba(0, 0, 0, 0.05);
+  --gradient-opacity: 0.05;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: var(--theme-transition);
+}
+
+main {
+  padding-top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  transition: var(--theme-transition);
+}
+
+p,
+span,
+div {
+  transition: var(--theme-transition);
+}
+
+/* Premium Background */
+body::before {
+  content: "";
+  position: fixed;
+  top: -10%;
+  left: -10%;
+  width: 120%;
+  height: 120%;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(99, 102, 241, var(--gradient-opacity)) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(168, 85, 247, var(--gradient-opacity)) 0%, transparent 40%);
+  z-index: -1;
+  pointer-events: none;
+  transition: var(--theme-transition);
+}
+
+/* Glassmorphism Classes */
+.glass {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  transition: var(--theme-transition), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-hover:hover {
+  transform: translateY(-8px);
+  background: var(--glass-hover-bg);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Layout Utilities */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  section {
+    margin-bottom: 24px;
+  }
+
+  .container {
+    padding: 0 20px;
+  }
+
+  h1 {
+    font-size: 2.5rem !important;
+  }
+
+  h2 {
+    font-size: 2rem !important;
+  }
+
+  h3 {
+    font-size: 1.5rem !important;
+  }
+
+  /* Ensure detail page grids collapse */
+  .detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
+  /* Hero button stacking */
+  .hero-actions {
+    flex-direction: column !important;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
+  .hero-actions a {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Navbar Mobile - Handle max-content overflow */
+  nav {
+    width: 90% !important;
+    padding: 12px 20px !important;
+    justify-content: space-between !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .nav-links {
+    display: none !important;
+    /* Hide by default on mobile */
+    flex-direction: column !important;
+    width: 100% !important;
+    padding: 24px 0 !important;
+    gap: 20px !important;
+  }
+
+  .nav-links.open {
+    display: flex !important;
+  }
+
+  .mobile-toggle,
+  .mobile-logo {
+    display: block !important;
+  }
+
+  /* Form Stacking */
+  .contact-form {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .contact-form input,
+  .contact-form button {
+    width: 100% !important;
+  }
+
+  /* Northstar Milestones Stack */
+  .milestones-container {
+    flex-direction: column !important;
+    gap: 32px !important;
+    align-items: center !important;
+  }
+
+  .milestones-connector {
+    display: none !important;
+  }
+
+  /* Padding adjustments */
+  .mobile-tight-padding {
+    padding: 32px 20px !important;
+  }
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  background: none;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: var(--theme-transition);
+}

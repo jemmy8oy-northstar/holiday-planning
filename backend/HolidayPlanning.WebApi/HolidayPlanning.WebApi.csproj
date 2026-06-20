@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <EnableDefaultResourceItems>false</EnableDefaultResourceItems>    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <Target Name="RenameOpenApiFile" AfterTargets="GenerateOpenApiDocuments" Condition="'$(Configuration)' == 'Debug' And Exists('$(OpenApiDocumentsDirectory)$(AssemblyName)_v1.json')">
+    <Move SourceFiles="$(OpenApiDocumentsDirectory)$(AssemblyName)_v1.json" DestinationFiles="$(OpenApiDocumentsDirectory)openapi.json" OverwriteReadOnlyFiles="true" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="16.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.12.40" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../HolidayPlanning.Services/HolidayPlanning.Services.csproj" />
+    <ProjectReference Include="../HolidayPlanning.Abstractions/HolidayPlanning.Abstractions.csproj" />
+    <ProjectReference Include="../HolidayPlanning.DataModels/HolidayPlanning.DataModels.csproj" />
+    <ProjectReference Include="../HolidayPlanning.DomainModels/HolidayPlanning.DomainModels.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Update="Data/*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

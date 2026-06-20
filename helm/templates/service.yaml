@@ -1,0 +1,19 @@
+{{- range .Values.apps }}
+{{- if .service }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.fullname" $ }}-{{ .name }}
+  labels:
+    app: {{ .name }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .service.port }}
+      targetPort: {{ .service.targetPort }}
+      protocol: TCP
+  selector:
+    app: {{ .name }}
+---
+{{- end }}
+{{- end }}

@@ -1,0 +1,18 @@
+name: Check Source Branch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert source branch is dev
+        run: |
+          echo "Pull request head branch: ${{ github.head_ref }}"
+          if [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "ERROR: You can only merge into main from the 'dev' branch."
+            exit 1
+          fi

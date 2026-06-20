@@ -1,0 +1,8 @@
+mode: Mainline
+branches:
+  main:
+    regex: ^main$
+    tag: ""
+    increment: Patch
+ignore:
+  sha: []

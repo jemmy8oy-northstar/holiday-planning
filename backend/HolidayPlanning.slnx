@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="HolidayPlanning.Abstractions/HolidayPlanning.Abstractions.csproj" />
+  <Project Path="HolidayPlanning.WebApi/HolidayPlanning.WebApi.csproj" />
+  <Project Path="HolidayPlanning.DataModels/HolidayPlanning.DataModels.csproj" />
+  <Project Path="HolidayPlanning.Database/HolidayPlanning.Database.csproj" />
+  <Project Path="HolidayPlanning.DomainModels/HolidayPlanning.DomainModels.csproj" />
+  <Project Path="HolidayPlanning.EntityModels/HolidayPlanning.EntityModels.csproj" />
+  <Project Path="HolidayPlanning.Services/HolidayPlanning.Services.csproj" />
+</Solution>

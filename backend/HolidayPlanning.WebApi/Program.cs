@@ -19,8 +19,11 @@ if (app.Environment.IsDevelopment())
 
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.Migrate();
+    var dbContext = scope.ServiceProvider.GetService<AppDbContext>();
+    if (dbContext is null)
+        app.Logger.LogWarning("Skipping database migration — no connection string configured.");
+    else
+        dbContext.Database.Migrate();
 }
 
 app.UseHttpsRedirection();

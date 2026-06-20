@@ -34,27 +34,6 @@ function ghSilent(args) {
   }
 }
 
-// ── Labels ────────────────────────────────────────────────────────────────────
-
-const LABELS = [
-  { name: 'waiting-for-ai',    color: '2ea44f', description: "AI's turn — discussion, spec iteration, or PR review" },
-  { name: 'waiting-for-human', color: '0075ca', description: "Human's turn — reviewing, providing input, or signing off" },
-  { name: 'action-ready',      color: '7057ff', description: 'Issue approved for implementation — AI should start coding' },
-];
-
-function ensureLabels() {
-  log('Creating labels...');
-  for (const label of LABELS) {
-    const existing = ghSilent(`label list --search "${label.name}" --json name -q ".[0].name"`);
-    if (existing === label.name) {
-      log(`  Label "${label.name}" already exists — skipping`);
-    } else {
-      gh(`label create "${label.name}" --color "${label.color}" --description "${label.description}"`);
-      log(`  Created label "${label.name}"`);
-    }
-  }
-}
-
 // ── Milestone ─────────────────────────────────────────────────────────────────
 
 const MILESTONE_TITLE = 'MVP';
@@ -78,7 +57,7 @@ const ISSUES = [
     title: '[1a] Set up pipeline secrets and variables',
     body: `## Summary
 
-Configure CI/CD pipeline secrets and repository variables so automated workflows can build and deploy the app.
+Configure CI/CD pipeline secrets and repository variables so automated workflows can build, deploy, and run Claude.
 
 ## Acceptance Criteria
 
@@ -88,25 +67,26 @@ Configure CI/CD pipeline secrets and repository variables so automated workflows
 - [ ] Repository **Secrets** added (Settings → Secrets and variables → Secrets):
   - \`OCIR_USERNAME\` — e.g. \`tenancy/oracleidentitycloudservice/your@email.com\`
   - \`OCIR_AUTH_TOKEN\` — OCI auth token
+  - \`CLAUDE_CODE_OAUTH_TOKEN\` — OAuth token for the Claude GitHub Action
 
-## AI Notes
+## Notes
 
-This issue is actioned by the developer, not the AI. Close it once secrets are configured.
+This issue is actioned by the developer, not Claude. Close it once secrets are configured.
 `,
   },
   {
     title: '[1b] Set up branch policies',
     body: `## Summary
 
-Configure branch protection rules so that \`main\` is developer-only and all agent work flows through \`dev\` via PRs.
+Configure branch protection rules so that \`main\` is developer-only and all work flows through \`dev\` via PRs.
 
 ## Acceptance Criteria
 
 - [ ] \`main\` branch created and protected (require PR, no direct push)
-- [ ] \`dev\` branch created — default branch for agent PRs
+- [ ] \`dev\` branch created — default branch for Claude PRs
 - [ ] **"Automatically delete head branches"** enabled (Settings → General)
 
-## AI Notes
+## Notes
 
 This issue is actioned by the developer. Close it once branch policies are in place.
 `,
@@ -115,19 +95,19 @@ This issue is actioned by the developer. Close it once branch policies are in pl
     title: '[1c] Define high-level project spec, vision and external dependencies',
     body: `## Summary
 
-Capture the product vision and scope so the AI can produce the first spec PR — covering epics, features, and external dependencies.
+Capture the product vision and scope so Claude can produce the first spec PR — covering epics, features, and external dependencies.
 
 ## Acceptance Criteria
 
 - [ ] Spec questionnaire completed (see below)
-- [ ] \`ai-ready\` label applied to this issue
-- [ ] AI raises a spec PR with vision statement, \`docs/epics/\`, \`docs/features/\`, and dependency notes
-- [ ] All ambiguities resolved via PR comments or \`needs-input\` issues
+- [ ] Developer comments \`@claude [1c] is ready — please raise the spec PR\` on this issue
+- [ ] Claude raises a spec PR with vision statement, \`docs/epics/\`, \`docs/features/\`, and dependency notes
+- [ ] All ambiguities resolved via PR comments
 - [ ] Spec PR reviewed and merged by developer
 
 ## Spec Questionnaire
 
-Please answer the following, then add the \`ai-ready\` label:
+Please answer the following, then tag \`@claude\` to proceed:
 
 - **What problem does this product solve, and for whom?**
 
@@ -141,12 +121,11 @@ Please answer the following, then add the \`ai-ready\` label:
 
 - **What is explicitly out of scope for the MVP?**
 
-## AI Notes
+## When tagged with \`@claude\`
 
-When this issue is labelled \`ai-ready\`:
 1. Read the questionnaire answers above
 2. Raise a spec PR containing: vision statement, \`docs/epics/*.md\`, \`docs/features/*.md\`, out-of-scope list, and external dependency notes
-3. Leave a PR comment for anything ambiguous — if unresolved after one round, open a \`needs-input\` issue
+3. Leave a PR comment for anything ambiguous
 `,
   },
   {
@@ -167,7 +146,7 @@ Depends on [1c] spec PR being merged.
 
 ## [2] Issue structure
 
-Each \`[2]\` issue the AI creates must follow this format:
+Each \`[2]\` issue must follow this format:
 
 \`\`\`
 Design the <feature name> for <product name>.
@@ -175,7 +154,6 @@ Design the <feature name> for <product name>.
 **Feature:** \`docs/features/<feature-file>.md\`
 
 **Open UX questions to resolve:**
-- <question from feature file>
 - <question from feature file>
 
 **Deliverables (in the design PR):**
@@ -185,10 +163,9 @@ Design the <feature name> for <product name>.
 - [ ] All open UX questions answered
 \`\`\`
 
-## AI Notes
+## When tagged with \`@claude\`
 
-Trigger: [1c] PR merged.
-Action: Read \`docs/features/\`, create one \`[2] <Feature> design\` issue per frontend feature using the structure above, assign each to the repo owner, then close this issue.
+Read \`docs/features/\`, create one \`[2] <Feature> design\` issue per frontend feature using the structure above, assign each to the repo owner, then close this issue.
 `,
   },
   {
@@ -210,7 +187,7 @@ The AI raises a single PR containing two documents. Before raising the PR, the f
 
 ### 3. Fake data strategy
 - How does the frontend get data before the real backend exists?
-- Preferred: [2] Faker backend skeleton (confirmed or proposed)
+- Preferred: Faker backend skeleton (confirmed or proposed)
 - Alternative: MSW (Mock Service Worker) — if Faker backend not viable
 
 ### 4. Frontend TDD approach
@@ -220,18 +197,18 @@ The AI raises a single PR containing two documents. Before raising the PR, the f
 
 ### 5. BDD user stories
 - Definition: *"As [role], I want [action], so that [benefit]"*
-- One story per user workflow from [1e]
+- One story per user workflow
 - Acceptance criteria per story (Given/When/Then or checklist)
 
 **Both documents (\`docs/tech-decisions-frontend.md\` and \`docs/user-stories-frontend.md\`) must cover all five areas before the PR is raised.**
 
 ## Acceptance Criteria
 
-- [ ] \`docs/tech-decisions-frontend.md\` — library choices with rationale (sections 1, 3, 4)
-- [ ] \`docs/user-stories-frontend.md\` — BDD stories for every signed-off design (section 5)
-- [ ] API skeleton contracts included — endpoint shapes, RTK Query hooks, TypeScript types (section 2)
-- [ ] Fake data strategy documented — Faker backend skeleton or MSW alternative (section 3)
-- [ ] Frontend TDD approach defined — Vitest + RTL, spec-first, one test file per component (section 4)
+- [ ] \`docs/tech-decisions-frontend.md\` — library choices with rationale
+- [ ] \`docs/user-stories-frontend.md\` — BDD stories for every signed-off design
+- [ ] API skeleton contracts included — endpoint shapes, RTK Query hooks, TypeScript types
+- [ ] Fake data strategy documented
+- [ ] Frontend TDD approach defined
 - [ ] Human review gate — developer must approve before merge
 - [ ] This issue closed on merge
 
@@ -239,10 +216,9 @@ The AI raises a single PR containing two documents. Before raising the PR, the f
 
 Depends on all \`[2]\` design issues being closed.
 
-## AI Notes
+## When tagged with \`@claude\`
 
-Trigger: all \`[2]\` issues closed.
-Action: Raise a single PR with \`docs/tech-decisions-frontend.md\` (library choices, fake data strategy, TDD approach) and \`docs/user-stories-frontend.md\` (BDD stories + API skeleton contracts). All five sections must be addressed before the PR is raised — do not leave API skeleton, fake data strategy, TDD approach, or BDD definition to AI discretion.
+Raise a single PR with \`docs/tech-decisions-frontend.md\` (library choices, fake data strategy, TDD approach) and \`docs/user-stories-frontend.md\` (BDD stories + API skeleton contracts). All five sections must be addressed before the PR is raised.
 `,
   },
   {
@@ -268,10 +244,9 @@ Implement the API contracts from the [3a] spec as real ASP.NET Core Minimal API 
 
 Depends on [3a] PR being merged.
 
-## AI Notes
+## When tagged with \`@claude\`
 
-Trigger: [3a] PR merged.
-Action: (1) Read \`docs/user-stories-frontend.md\`, create \`[4]\` issues, update \`docs/features/*.md\`. (2) Raise a backend skeleton PR implementing the API endpoints with Bogus-generated data in the WebApi project.
+(1) Read \`docs/user-stories-frontend.md\`, create \`[4]\` issues, update \`docs/features/*.md\`. (2) Raise a backend skeleton PR implementing the API endpoints with Bogus-generated data in the WebApi project.
 `,
   },
   {
@@ -293,9 +268,9 @@ Once all frontend implementation issues (\`[4]\`) are closed, raise a backend de
 
 ## Data Source Validation (required before writing implementation issues)
 
-For each external data source listed in [1c] / [1e]:
+For each external data source listed in [1c]:
 
-- [ ] Confirm the API endpoint and series ID exist and are accessible (curl/httpie the endpoint — do not assume)
+- [ ] Confirm the API endpoint and series ID exist and are accessible (curl the endpoint — do not assume)
 - [ ] Document the exact URL pattern used
 - [ ] Note rate limits and API key requirements
 - [ ] Record the data cadence (daily / monthly / quarterly) and earliest available date
@@ -307,10 +282,9 @@ For each external data source listed in [1c] / [1e]:
 
 Depends on all \`[4]\` frontend issues being closed.
 
-## AI Notes
+## When tagged with \`@claude\`
 
-Trigger: all \`[4]\` issues closed.
-Action: Raise a backend design PR. The OpenAPI spec generated from the skeleton app is the source of truth for API contracts. Follow \`docs/specs/backend-architecture.md\` and \`docs/specs/backend-srp.md\`.
+Raise a backend design PR. The OpenAPI spec generated from the skeleton app is the source of truth for API contracts. Follow \`docs/specs/backend-architecture.md\` and \`docs/specs/backend-srp.md\`.
 `,
   },
   {
@@ -329,10 +303,9 @@ Once the backend design PR from [5a] is merged, raise a backend user story spec 
 
 Depends on [5a] PR being merged.
 
-## AI Notes
+## When tagged with \`@claude\`
 
-Trigger: [5a] PR merged.
-Action: Raise a PR adding \`docs/user-stories-backend.md\` with BDD-style stories derived from the API contracts and backend design.
+Raise a PR adding \`docs/user-stories-backend.md\` with BDD-style stories derived from the API contracts and backend design.
 `,
   },
   {
@@ -344,13 +317,12 @@ Once the backend user story spec PR from [5b] is merged, create individual \`[6]
 ## Acceptance Criteria
 
 - [ ] One \`[6] <Story>\` issue created per story in the merged backend user story spec
-- [ ] Each issue uses the **User Story** issue template
 - [ ] \`docs/features/*.md\` updated with the GH issue numbers
 - [ ] This issue closed once all \`[6]\` issues are created
 
 ## [6] Issue structure
 
-Each \`[6]\` issue the AI creates must include the following section:
+Each \`[6]\` issue must include:
 
 \`\`\`
 ## Before implementing
@@ -362,10 +334,9 @@ Confirm the series ID and API endpoint from the Phase 5 data source validation n
 
 Depends on [5b] PR being merged.
 
-## AI Notes
+## When tagged with \`@claude\`
 
-Trigger: [5b] PR merged.
-Action: Read \`docs/user-stories-backend.md\`, create one \`[6] <Story>\` issue per story, update \`docs/features/*.md\` with issue numbers, then close this issue.
+Read \`docs/user-stories-backend.md\`, create one \`[6] <Story>\` issue per story, update \`docs/features/*.md\` with issue numbers, then close this issue.
 `,
   },
   {
@@ -383,12 +354,11 @@ Wire up the real Postgres database — EF Core migrations, connection config, an
 
 ## Dependencies
 
-Depends on all \`[5]\` backend implementation issues being closed.
+Depends on all \`[6]\` backend implementation issues being closed.
 
-## AI Notes
+## When tagged with \`@claude\`
 
-Trigger: all \`[6]\` issues closed (or skip if Postgres was marked not required in [1c]).
-Action: Scaffold EF Core migrations, wire connection string from K8s secret, raise a PR.
+Scaffold EF Core migrations, wire connection string from K8s secret, raise a PR. Skip if Postgres was marked not required in [1c].
 `,
   },
   {
@@ -399,7 +369,7 @@ Draft a YouTube walkthrough script and outline for the MVP launch.
 
 ## Acceptance Criteria
 
-- [ ] AI drafts a walkthrough script covering key features and user journeys
+- [ ] Claude drafts a walkthrough script covering key features and user journeys as \`docs/mvp-walkthrough-script.md\`
 - [ ] Developer records and publishes the video
 - [ ] Feedback gathered from initial users
 
@@ -407,10 +377,9 @@ Draft a YouTube walkthrough script and outline for the MVP launch.
 
 Depends on [6a] (or all backend stories) being merged.
 
-## AI Notes
+## When tagged with \`@claude\`
 
-Trigger: MVP is deployed and stable.
-Action: Draft a YouTube script with an intro, feature walkthrough sections, and a call to action. Structure it as a \`docs/mvp-walkthrough-script.md\` PR.
+Draft a YouTube script with an intro, feature walkthrough sections, and a call to action. Raise it as a PR adding \`docs/mvp-walkthrough-script.md\`.
 `,
   },
   {
@@ -427,11 +396,10 @@ Generate production refinement tickets covering performance, security, scaling, 
 
 Depends on [7a].
 
-## AI Notes
+## When tagged with \`@claude\`
 
-⚠️ **Confirm developer interest before actioning this issue.**
-Trigger: Developer explicitly asks the AI to action this.
-Action: Audit the codebase and raise targeted issues for: N+1 queries, missing indexes, auth hardening, rate limiting, load testing, and any coverage gaps identified during implementation.
+⚠️ **Only action when the developer explicitly asks.**
+Audit the codebase and raise targeted issues for: N+1 queries, missing indexes, auth hardening, rate limiting, load testing, and any coverage gaps identified during implementation.
 `,
   },
 ];
@@ -442,10 +410,11 @@ async function run() {
   log('Scaffolding initial SDD issues...');
   log('');
 
-  ensureLabels();
+  const milestone = ensureMilestone();
   log('');
 
-  const milestone = ensureMilestone();
+  const owner = gh('repo view --json owner --jq .owner.login');
+  log(`Repo owner: ${owner}`);
   log('');
 
   log(`Creating ${ISSUES.length} orchestrator issues...`);
@@ -459,7 +428,7 @@ async function run() {
     const bodyFile = join(tmpdir(), `issue-body-${Date.now()}.md`);
     writeFileSync(bodyFile, issue.body);
 
-    gh(`issue create --title "${issue.title}" --body-file "${bodyFile}" --milestone "${milestone}"`);
+    gh(`issue create --title "${issue.title}" --body-file "${bodyFile}" --milestone "${milestone}" --assignee "${owner}"`);
     log(`  CREATED  "${issue.title}"`);
 
     try { unlinkSync(bodyFile); } catch { /* ignore */ }
@@ -467,7 +436,7 @@ async function run() {
 
   log('');
   log('✅ Done. All initial SDD issues created.');
-  log('   Next step: work through Phase 1 issues, then add the waiting-for-ai label to [1c] once the spec questionnaire is complete.');
+  log('   Next step: work through Phase 1 issues ([1a], [1b]), then fill in the [1c] spec questionnaire and comment @claude to proceed.');
 }
 
 run().catch(err => {

@@ -1,7 +1,3 @@
----
-trigger: always_on
----
-
 # Project Rules
 
 ## Branch Strategy
@@ -21,8 +17,8 @@ main  ← developer only, production-ready, never touched by the agent
 
 The developer interfaces via GitHub only — they do not have access to the local machine. All progress must be visible via commits and PRs on the remote.
 
-- When picking up a GH issue, use the `action-issue` skill
-- When responding to PR review comments, use the `respond-to-pr` skill
+- When picking up a GH issue, follow the "Implementing an Issue" steps in `CLAUDE.md`
+- When responding to PR review comments, follow the "Responding to PR Reviews" steps in `CLAUDE.md`
 - Never leave work uncommitted and unpushed at the end of a session
 - Never merge your own PR
 

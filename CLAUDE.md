@@ -32,10 +32,10 @@ A `dotnet new` monorepo template for .NET 10 + React 19 projects. Every new proj
 │       ├── store/                 # Redux store
 │       └── styles/                # Global SCSS: design tokens, resets, utilities
 ├── scripts/init.mjs               # First-run onboarding: generates appsettings + .env
+├── scripts/init-issues.mjs        # Scaffolds initial SDD issues on GitHub
 ├── helm/                          # Helm chart for Kubernetes deployment
-├── deploy.sh                      # Local CD: build, push images, restart K8s deployments
 ├── docs/specs/                    # Architecture decisions and how-to guides
-└── .agents/                       # AI rules and workflows
+└── .agents/                       # Coding conventions and workflow rules
 ```
 
 ## Key Docs
@@ -47,10 +47,8 @@ A `dotnet new` monorepo template for .NET 10 + React 19 projects. Every new proj
 | `docs/specs/openapi-codegen.md` | OpenAPI → RTK Query codegen workflow |
 | `docs/specs/testing-strategy.md` | Unit tests, in-process integration tests, Vitest |
 | `docs/specs/sdd-workflow.md` | 7-phase Spec Driven Development process |
+| `docs/ai-workflow.md` | End-to-end AI-assisted project workflow and phase structure |
 | `.agents/rules/project.md` | Coding conventions, branch strategy, GitHub workflow rules |
-| `.claude/skills/action-issue/SKILL.md` | How to pick up and implement a GH issue |
-| `.claude/skills/respond-to-pr/SKILL.md` | How to respond to PR review comments |
-| `.claude/skills/pr-readiness/SKILL.md` | Pre-PR checklist — naming, AutoMapper, typed results, architecture |
 
 ## Backend Architecture Quick Reference
 
@@ -71,7 +69,6 @@ A `dotnet new` monorepo template for .NET 10 + React 19 projects. Every new proj
 - **Service interfaces** — always return interfaces (`IRatio`), never concrete types
 - **Route handlers** — named static methods; typed results (`Ok<T>` / `Results<T1,T2>`); map via `IMapper`; no business logic
 - **AutoMapper** — `WebApi/Mapper.cs` for Domain→Data (API boundary); `Services/Mapper.cs` for Entity→Domain (DB boundary)
-- **Always run `.claude/skills/pr-readiness/SKILL.md` before opening a PR**
 
 ## Running Locally
 
@@ -105,15 +102,27 @@ cd backend && dotnet ef database update \
 
 CI runs on PRs only (`ci.yml`). Image builds are manual (`docker-build-push.yml`, `workflow_dispatch`).
 
+## How to Trigger Claude
+
+Tag `@claude` in any issue or PR comment. Claude reads the full thread before acting.
+
+Examples:
+- `@claude the spec questionnaire in [1c] is filled in — please raise the spec PR`
+- `@claude implement this issue`
+- `@claude address the review comments on this PR`
+- `@claude [2a] is ready — please create the design issues`
+
+If you want a plan or have a question, just ask. If you want implementation, say so.
+
 ## GitHub Conventions
 
 - **Branch target**: All PRs target `dev`. Never target `main` — `dev` → `main` is a human-only action.
-- **PR assignment**: Every PR the AI raises must be assigned to `the repo owner`.
-- **Issue assignment**: Every issue the AI acts on must be assigned to `the repo owner`.
-- **Issue linking**: Every PR body must include `Closes #N`. The AI also comments on the issue: *🤖 PR raised: #N — please review when ready.*
-- **Labels**: After completing work, remove `waiting-for-ai` or `action-ready` — do NOT apply `waiting-for-human`. Anything without a trigger label is implicitly the human's turn. If blocked, remove the trigger label and post a comment.
+- **PR assignment**: Every PR Claude raises must be assigned to the repo owner.
+- **Issue assignment**: Every issue Claude acts on must be assigned to the repo owner.
+- **Issue linking**: Every PR body must include `Closes #N`. Claude also comments on the issue: *🤖 PR raised: #N — please review when ready.*
 
 ## Notification Rule (mandatory)
+
 Always assign the repository owner to every issue and PR:
 - `gh issue create ... --assignee $(gh repo view --json owner --jq .owner.login)`
 - `gh pr create   ... --assignee $(gh repo view --json owner --jq .owner.login)`
@@ -122,13 +131,13 @@ Always assign the repository owner to every issue and PR:
 
 ## Assumptions & Decisions (mandatory for all AI-raised PRs)
 
-Every PR the AI raises must include a populated "Assumptions & Decisions" section in the PR body:
+Every PR Claude raises must include a populated "Assumptions & Decisions" section in the PR body:
 
 ```markdown
 ## Assumptions & Decisions
 
 > Any assumption made during implementation that was not explicitly specified in the issue or spec.
-> If you disagree with any item, comment and re-apply `action-ready` — the AI will revise.
+> If you disagree with any item, comment and tag `@claude` with the correction — Claude will revise.
 
 | # | Assumption | Rationale | If incorrect... |
 |---|---|---|---|
@@ -140,13 +149,149 @@ Rules:
 - Always surface: branch target choice, external API/series ID choices, CSS/styling strategy, database decisions.
 - Never leave the table blank.
 
-## Agent Conventions
+## Implementing an Issue
 
-### Phase Guard Status Format
+When tagged to implement a GitHub issue:
 
-When triggered on an issue, check phase dependencies and post a concise status block:
+### 1. Read the full issue before starting
+Read the issue body AND all comments. The comments contain the negotiated spec. Do not start until everything is read.
 
-````markdown
+### 2. Create a branch off dev
+```bash
+git checkout dev && git pull
+git checkout -b {issue-number}-{short-kebab-description}
+```
+
+### 3. Implement with TDD
+Follow the top-down TDD flow in `docs/specs/testing-strategy.md`. Write tests before implementation. Commit after each meaningful unit of work.
+
+### 4. Format before every commit
+```bash
+# C# files
+cd backend && dotnet format
+
+# TypeScript / CSS files
+npx prettier --write "frontend/src/**/*.{ts,tsx,css}"
+```
+
+### 5. Push frequently
+Push after every meaningful commit. The developer cannot see work until it is on the remote.
+```bash
+git push -u origin {issue-number}-{description}
+```
+
+### 6. Open a PR targeting dev
+```bash
+gh pr create --base dev --title "..." --body "..."
+```
+PR body must include:
+- `Closes #N` to auto-close the issue on merge
+- Summary of what was implemented
+- Assumptions & Decisions table
+- Anything the reviewer needs to know to assess the work without running it locally
+
+### 7. Do not merge your own PR
+Leave it open for the developer to review. Comment on the issue: *🤖 PR raised: #N — please review when ready.*
+
+## Responding to PR Reviews
+
+When tagged to address PR review comments:
+
+### 1. Read all comments before making any changes
+Read every comment on the PR before touching code. Understand the full picture first.
+
+### 2. Assess each comment
+- **Implement** — clear request, agreed upon
+- **Ask for clarification** — ambiguous; reply on the comment thread before acting, don't guess
+- **Push back with reasoning** — if you disagree, explain why in a comment before implementing
+
+### 3. Make focused commits per change
+Address comments in separate, focused commits where possible.
+```bash
+git commit -m "Address PR feedback: extract validation into separate method (#42)"
+```
+
+### 4. Push after every commit
+Do not batch everything and push once at the end. The developer follows progress via the commit history.
+
+### 5. Reply to every comment on GitHub
+After pushing the relevant commit, reply explaining what changed and why. Do not leave comments unacknowledged.
+
+### 6. Post a summary comment when done
+Once all comments are addressed, post a single PR comment summarising what was changed and flagging anything still needing a decision.
+
+### 7. Do not re-request review or resolve conversations
+Leave that to the developer.
+
+## Pre-PR Checklist
+
+Run this checklist before raising any PR against backend changes.
+
+### 1. Naming Conventions
+
+| Check | Rule |
+|---|---|
+| DataModels use plain nouns | `Ratio`, not `RatioResponse` — use `*Response` only if the route constructs a meaningfully different shape |
+| `*Request` suffix | Only for inbound route bodies with non-trivial shape; never for query-string parameters |
+| DomainModels prefixed `Domain*` | `DomainRatio`, `DomainIndicator` — not plain nouns |
+| Entities suffixed `*Entity` | Reserved for EF Core entity classes in `EntityModels/` |
+
+### 2. Abstractions Project — Interfaces Only
+
+- [ ] No concrete types defined in `HolidayPlanning.Abstractions`
+- [ ] Service interface methods return **interfaces**, not concrete types (`IRatio`, not `Ratio`)
+- [ ] `HolidayPlanning.Abstractions.csproj` has **zero** `<ProjectReference>` entries to concrete projects
+
+### 3. Inheritance & Extension Pattern
+
+- [ ] Every `Domain*` class extends its `DataModels` counterpart (`DomainRatio : Ratio`)
+- [ ] `DataModels` classes implement the corresponding `Abstractions` interface (`Ratio : IRatio`)
+- [ ] Domain models in `HolidayPlanning.DomainModels`, data models in `HolidayPlanning.DataModels`
+
+### 4. Route Handlers
+
+- [ ] Handlers are **named static methods**, not inline lambdas
+- [ ] Return **typed results** — `Ok<T>`, `Results<Ok<T>, NotFound>` — never bare `IResult`
+- [ ] Mapping done via **AutoMapper** (`IMapper`), not manual helpers
+- [ ] No business logic in routes
+
+### 5. Service Layer
+
+- [ ] Service methods return interface types
+- [ ] No HTTP or serialisation concepts in services
+- [ ] Bogus/faker logic lives in `Services/`, never in `WebApi/`
+
+### 6. AutoMapper Profiles
+
+- [ ] `WebApi/Mapper.cs` — maps `Domain*` → DataModel (API boundary)
+- [ ] `Services/Mapper.cs` — maps `*Entity` → `Domain*` (DB boundary)
+- [ ] Both profiles discovered via `cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies())`
+
+### 7. Build Gate
+
+```bash
+cd backend && dotnet build
+```
+
+- [ ] **0 errors** before raising the PR
+
+## Code Formatting
+
+Format before every commit. CI enforces these on PRs.
+
+```bash
+# C# — run from repo root
+cd backend && dotnet format
+
+# TypeScript / CSS
+npx prettier --write "frontend/src/**/*.{ts,tsx,css}"
+```
+
+## Phase Guard Status Format
+
+When tagged on an orchestrator issue, check phase dependencies and post a concise status block if any checks are pending:
+
+```markdown
 ## 🔍 Phase Check
 
 | Check | Status |
@@ -154,193 +299,56 @@ When triggered on an issue, check phase dependencies and post a concise status b
 | Phase N dependencies | ⏳ #32, #34 still open — waiting |
 | Key decision from [1c] | ✅ "No DB for MVP" — EF Core items skipped |
 | External data sources | ⚠️ CAPE source unverified — flagging in spec |
-
-> Proceeding once #32 and #34 close. Will post one update when they do.
-````
-
-Rules:
-- Post this table **instead of** a verbose paragraph analysis
-- Maximum 3–5 rows — only include the checks that are relevant to this issue
-- ✅ = confirmed / met, ⏳ = pending / waiting, ⚠️ = flagged / needs attention
-- If all checks pass: proceed directly to implementation without posting the table
-
-### Dependency Check Responses
-
-When an issue is triggered before its dependencies are met, respond with a **single short comment only**:
-
-> ⏳ Dependencies not yet met: [list open blocking issues as `#N`]. Will proceed once they close.
-
-Rules:
-- Do NOT repeat the full issue analysis
-- Do NOT re-list acceptance criteria
-- Do NOT re-summarise the issue body
-- Post **one comment per trigger maximum** — do not post multiple comments in a single run
-- If you have already posted a dependency-waiting comment and nothing has changed, do not post again
-
-### Multi-pass Issue Behaviour
-
-Before posting any comment on an issue, read ALL existing comments in full.
-
-- If you have already asked clarifying questions and the owner has answered them: proceed with the implementation using those answers. Do not re-ask.
-- If you have already proposed a plan or analysis: do not repeat it — continue from where you left off.
-- If a previous pass left a structured summary comment (see "Structured Pass Summary Format" below): read that summary first and skip re-reading files already listed there.
-
-When a task is **partially complete** (ran out of time, blocking question posted):
-1. Post a clearly labelled partial pass comment: `## Pass N — Partial`
-2. List what was completed and what remains
-3. If you asked a blocking question: remove `action-ready`, wait for developer's answer
-4. If partial due to scope/time (no blocking question): re-apply `action-ready` yourself (see Self-relabelling below)
-
-At the end of every partial pass, state explicitly: **"Re-apply `action-ready` (not `waiting-for-ai`) to continue implementation."**
-
-When a task is **complete** (PR raised):
-1. Post: `🤖 PR raised: #N — please review when ready.`
-2. Remove `action-ready` — the ball is in the developer's court
-
-### Self-relabelling on Partial Completion
-
-When a task is **partially complete** due to scope/time (not a blocking question):
-
-```bash
-# Re-apply action-ready so the next pass fires without developer intervention
-gh issue edit $ISSUE_NUMBER --add-label "action-ready"
-gh issue comment $ISSUE_NUMBER --body "⚡ Pass N complete (partial). Re-labelled for next pass. Remaining: [X, Y]"
 ```
 
 Rules:
-- **Do** re-apply `action-ready` when: implementation is in progress but not finished (no PR raised yet)
-- **Do NOT** re-apply `action-ready` when: you have asked a blocking question and are waiting for the developer's answer
-- When re-applying, always post a comment explaining what was completed and what remains
-
-Iteration limit hints (for operator — not enforced here):
-- Orchestrator issues (`[1c]`, `[3a]`, `[5a]`): expect ~2–4 passes. Suggest `max_turns=80` for these.
-- Implementation issues (`[4]`, `[6]`): should complete in one pass. Suggest `max_turns=40`.
-
-### Structured Pass Summary Format
-
-At the end of every AI pass (complete or partial), post a structured summary comment using this exact format:
-
-````markdown
-## AI Pass N Summary — YYYY-MM-DD
-
-**Status:** [completed / partial / blocked]
-
-**Completed this pass:**
-- [description] ✅
-
-**Not completed:**
-- [description — be specific about what remains]
-
-**Key decisions made:**
-- [decision]: [rationale]
-
-**Files to skip re-reading next pass (already processed):**
-- `path/to/file.md` — [one-line summary of what it contains]
-
-**Next trigger:** [what the developer needs to do — e.g. "Re-apply `action-ready` to continue", "Answer question about X"]
-````
-
-On the **next trigger**, read this summary comment **first** before reading any files listed in "Files to skip re-reading next pass". This eliminates redundant file reads and maintains continuity across passes.
-
-## Label Modes
-
-| Label | Effect | When to apply |
-|---|---|---|
-| `waiting-for-ai` | Bot enters **discussion mode** — answers questions, proposes plans. **Will NOT write code or raise a PR.** | New issues, Q&A rounds, requesting analysis or a plan |
-| `action-ready` | Bot enters **implementation mode** — writes code, runs tests, raises a PR. | After reviewing a plan and wanting implementation to begin or continue |
-
-When finishing a partial pass, always state explicitly:
-> "Re-apply `action-ready` (not `waiting-for-ai`) to continue implementation."
-
-This is mandatory — the developer has no other way to know which label triggers implementation.
+- Maximum 3–5 rows — only include relevant checks
+- ✅ = confirmed, ⏳ = pending, ⚠️ = flagged
+- If all checks pass: proceed directly without posting the table
 
 ## Clarification Protocol
 
-When implementation requires information not provided in the issue:
-
 **Step 1: Can I make a sensible assumption?**
-- Yes → implement with the assumption, document it in the PR's "Assumptions & Decisions" table. The developer reviews and overrides if needed. **Do not block.**
+- Yes → implement with the assumption, document it in the PR's Assumptions & Decisions table. **Do not block.**
 
 **Step 2: Is this a major architectural decision with no sensible default?**
-- Yes → post a single comment with the question + a recommended default. Remove `action-ready`. Do not start implementation until answered.
-- No → treat as Step 1 (assume + document).
+- Yes → post a single comment with the question + recommended default. Wait for a response before implementing.
+- No → treat as Step 1.
 
-**Anti-patterns to avoid:**
+Default behaviour: **Mixed** — assume minor/stylistic choices, ask only for major architectural decisions with no sensible default.
+
+Anti-patterns:
 - ❌ Asking the same question more than once
-- ❌ Re-listing full dependency analysis when the open-item count hasn't changed
-- ❌ Blocking on minor/stylistic choices (library patch version, variable names, etc.)
-- ❌ Posting multiple clarifying questions across separate comments — batch them into one
-
----
-
-## AI Behaviour Mode
-
-At the start of each project, check `docs/specs/proposal.md` (from [1e]) for the AI Behaviour Preference set in [1d]:
-
-- **Assume & Document:** Implement directly. Surface all non-obvious choices in the PR's Assumptions & Decisions table.
-- **Ask First:** Post clarifying questions before starting implementation. Wait for answers.
-- **Mixed (default if not specified):** Assume minor/stylistic choices. Ask only for major architectural decisions with no sensible default.
-
----
-
-## [1e] Formal Proposal Template
-
-When the AI opens a `[1e]` issue from a [1d] discussion, use this structure:
-
-```
-## User Workflows
-
-### [Workflow name]
-- User can [action]
-- User can [action]
-
-## External Dependencies
-
-| Dependency | Purpose | Notes |
-|------------|---------|-------|
-
-## Required API Endpoints
-
-| Method | Path | Purpose |
-|--------|------|---------|
-
-## Open decisions
-- [decision] — Proposal: [recommendation]. Rationale: [reason]. ✅ Unless you disagree?
-```
-
----
+- ❌ Blocking on minor choices (library patch version, variable names)
+- ❌ Posting multiple clarifying questions in separate comments — batch them into one
 
 ## Issue Factories ([3b] and [5c])
 
-Issue factories are AI passes that create multiple downstream issues programmatically. Follow these rules for all factory runs:
+Issue factories are passes that create multiple downstream issues programmatically.
 
 ### [3b] — Creates [4] frontend implementation issues
 
 Each [4] issue must include:
 - [ ] A single, clearly scoped frontend feature or component
-- [ ] Acceptance criteria referencing the BDD story from [3a] user stories
-- [ ] A Testing section (mandatory AC) — see Testing Standards
-- [ ] A Visual Evidence section (mandatory AC) — see Frontend PR Screenshots
+- [ ] Acceptance criteria referencing the BDD story from [3a]
+- [ ] A Testing section (mandatory AC)
+- [ ] A Visual Evidence section (mandatory AC)
 - [ ] `--assignee $(gh repo view --json owner --jq .owner.login)` (mandatory)
 
-### [5c] — Creates [6] backend fetcher/service issues
+### [5c] — Creates [6] backend implementation issues
 
 Each [6] issue must include:
 - [ ] A single, clearly scoped backend service or fetcher
 - [ ] Reference to the data source validation from [5a]
-- [ ] The "real HTTP enforcement" note (no stubs)
-- [ ] A Testing section (mandatory AC) — see Testing Standards
+- [ ] A Testing section (mandatory AC)
 - [ ] `--assignee $(gh repo view --json owner --jq .owner.login)` (mandatory)
 
 ### Factory verification
 
 After each factory run:
 ```bash
-# Verify all created issues have an assignee
 gh issue list --repo $(gh repo view --json nameWithOwner --jq .nameWithOwner) --limit 30 --json number,assignees | python3 -c "import sys,json; [print(f'#{i[\"number\"]} — assignees: {[a[\"login\"] for a in i[\"assignees\"]]}') for i in json.load(sys.stdin)]"
 ```
-
----
 
 ## Testing Standards (mandatory)
 
@@ -370,16 +378,6 @@ For any PR that modifies React components, pages, or CSS:
 If Playwright is not available in the environment:
 - Note this explicitly in the PR body
 - Add a TODO: "Install Playwright in the bot container to enable automated screenshots"
-
-## AI Guards (Claude Code Hooks)
-
-The `.claude/settings.json` in this repo defines shell hooks that run automatically before/after Claude's tool calls. These are structural guards — they enforce rules that cannot be overridden by AI instructions.
-
-Active guards:
-- **Linter (PostToolUse):** `prettier` runs after every `.ts`/`.tsx`/`.css` write. `dotnet format` runs after every `.cs` write.
-- **Branch guard (PreToolUse):** `git push` to `main` is blocked. Target `dev` and raise a PR.
-
-Do not modify or remove these guards. If a guard is triggering incorrectly, raise an issue.
 
 ## Helm Scaffold Setup
 

@@ -33,11 +33,14 @@ name: Build and Push Docker Images to OCIR
 #   then add `platforms: linux/arm64` to both build-push steps.
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 env:
-  FRONTEND_IMAGE: your-app-frontend   # Replace with your image name
-  BACKEND_IMAGE: your-app-backend     # Replace with your image name
+  FRONTEND_IMAGE: holiday-planning-frontend
+  BACKEND_IMAGE: holiday-planning-backend
 
 jobs:
   build-and-push:

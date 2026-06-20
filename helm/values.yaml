@@ -16,7 +16,7 @@ apps:
   - name: backend
     image:
       repository: lhr.ocir.io/lr7uc6l49odc/holiday-planning-backend # Update at scaffold time
-      tag: 0.1.4
+      tag: 0.1.6
       pullPolicy: Always
     containerPort: 8080
     replicas: 1
@@ -32,8 +32,8 @@ apps:
     affinity: {}
   - name: frontend
     image:
-      repository: lhr.ocir.io/lr7uc6l49odc/holiday-planning-frontend   # Update at scaffold time
-      tag: latest
+      repository: lhr.ocir.io/lr7uc6l49odc/holiday-planning-frontend # Update at scaffold time
+      tag: 0.1.6
       pullPolicy: Always
     containerPort: 80
     replicas: 1

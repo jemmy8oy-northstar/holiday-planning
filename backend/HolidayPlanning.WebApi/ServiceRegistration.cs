@@ -22,5 +22,13 @@ public static class ServiceRegistration
 
         services.AddAutoMapper(cfg => cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
         services.AddScoped<IStatusService, StatusService>();
+
+        // Holiday planning (docs/DESIGN.md). The scoring engine and dummy catalog
+        // are pure/stateless → singletons; the trip services touch the DbContext.
+        services.AddScoped<ITripStore, TripStore>();
+        services.AddScoped<ITripService, TripService>();
+        services.AddScoped<IRecommendationService, RecommendationService>();
+        services.AddSingleton<IOptionCatalogService, OptionCatalogService>();
+        services.AddSingleton<IOptionScoringService, OptionScoringService>();
     }
 }

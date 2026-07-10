@@ -6,4 +6,5 @@
   <Project Path="HolidayPlanning.DomainModels/HolidayPlanning.DomainModels.csproj" />
   <Project Path="HolidayPlanning.EntityModels/HolidayPlanning.EntityModels.csproj" />
   <Project Path="HolidayPlanning.Services/HolidayPlanning.Services.csproj" />
+  <Project Path="HolidayPlanning.Tests/HolidayPlanning.Tests.csproj" />
 </Solution>

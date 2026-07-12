@@ -4,10 +4,10 @@ namespace HolidayPlanning.DataModels.Models;
 
 public class OptionRecommendation : IOptionRecommendation
 {
-    public HolidayOption Option { get; set; } = new();
+    public required HolidayOption Option { get; set; }
     public double GroupScore { get; set; }
     public bool IsBlocked { get; set; }
-    public List<MemberFit> MemberFits { get; set; } = new();
+    public required List<MemberFit> MemberFits { get; set; }
 
     IHolidayOption IOptionRecommendation.Option => Option;
     IReadOnlyList<IMemberFit> IOptionRecommendation.MemberFits => MemberFits;

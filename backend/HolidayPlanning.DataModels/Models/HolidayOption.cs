@@ -4,14 +4,14 @@ namespace HolidayPlanning.DataModels.Models;
 
 public class HolidayOption : IHolidayOption
 {
-    public string Slug { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Country { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
+    public required string Slug { get; set; }
+    public required string Name { get; set; }
+    public required string Country { get; set; }
+    public required string Description { get; set; }
     public decimal CostPerPersonGbp { get; set; }
     public double TravelHours { get; set; }
     public int Nights { get; set; }
-    public Dictionary<string, double> VibeIntensities { get; set; } = new();
+    public required Dictionary<string, double> VibeIntensities { get; set; }
 
     IReadOnlyDictionary<string, double> IHolidayOption.VibeIntensities => VibeIntensities;
 }

@@ -10,7 +10,6 @@ on:
 
 jobs:
   backend:
-    name: Build backend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +26,6 @@ jobs:
         run: dotnet build ./backend --no-restore --configuration Release
 
   frontend:
-    name: Build frontend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

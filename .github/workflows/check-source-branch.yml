@@ -1,5 +1,9 @@
 name: Check Source Branch
 
+# main only. Adding `dev` here is the trap: this job asserts the PR's head is
+# `dev`, so on a PR into `dev` it fails every feature branch by design — and if
+# a ruleset also requires the `verify-branch` context on `dev`, nothing can ever
+# merge. Gate the promotion, not the day-to-day flow.
 on:
   pull_request:
     branches:
@@ -10,9 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Assert source branch is dev
+        # Passed through the environment rather than interpolated into the
+        # script: `${{ }}` is substituted as raw text before bash sees it, so a
+        # branch name containing shell metacharacters would execute here.
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          echo "Pull request head branch: ${{ github.head_ref }}"
-          if [ "${{ github.head_ref }}" != "dev" ]; then
+          echo "Pull request head branch: $HEAD_REF"
+          if [ "$HEAD_REF" != "dev" ]; then
             echo "ERROR: You can only merge into main from the 'dev' branch."
             exit 1
           fi

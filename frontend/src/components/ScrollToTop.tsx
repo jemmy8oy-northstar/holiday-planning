@@ -5,7 +5,8 @@ const ScrollToTop = () => {
     const { pathname, state } = useLocation();
 
     useEffect(() => {
-        if (!(state as any)?.noScroll) {
+        const noScroll = (state as { noScroll?: boolean } | null)?.noScroll;
+        if (!noScroll) {
             window.scrollTo(0, 0);
         }
     }, [pathname, state]);

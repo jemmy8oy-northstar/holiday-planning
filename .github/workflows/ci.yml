@@ -25,6 +25,16 @@ jobs:
       - name: Build
         run: dotnet build ./backend --no-restore --configuration Release
 
+      # Drop this step only if the solution genuinely has no test project.
+      # `dotnet test` over a solution containing none exits 0 having asserted
+      # nothing — a green tick that means the opposite of what it looks like.
+      - name: Test
+        run: >
+          dotnet test ./backend
+          --no-build
+          --configuration Release
+          --verbosity normal
+
   frontend:
     runs-on: ubuntu-latest
     steps:

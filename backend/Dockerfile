@@ -11,7 +11,12 @@ COPY HolidayPlanning.DomainModels/*.csproj ./HolidayPlanning.DomainModels/
 COPY HolidayPlanning.Services/*.csproj ./HolidayPlanning.Services/
 COPY HolidayPlanning.EntityModels/*.csproj ./HolidayPlanning.EntityModels/ 
 COPY HolidayPlanning.Database/*.csproj ./HolidayPlanning.Database/
+COPY HolidayPlanning.Tests/*.csproj ./HolidayPlanning.Tests/
 # Restore dependencies
+# NOTE: `dotnet restore` with no argument restores HolidayPlanning.slnx, so EVERY project
+# listed there must have its .csproj copied above — including test projects, which are
+# not published. Adding a project to the solution without a COPY line here breaks the
+# image build only, and only on a push to main, long after CI has gone green.
 RUN dotnet restore
 
 # Copy all source files

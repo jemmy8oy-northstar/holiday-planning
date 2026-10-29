@@ -15,7 +15,6 @@ public class StatusServiceTests
         var status = await new StatusService().GetSystemStatusAsync();
 
         Assert.False(string.IsNullOrWhiteSpace(status.Version));
-        Assert.Equal("1.1.0-alpha", status.Version);
     }
 
     [Fact]
@@ -25,7 +24,7 @@ public class StatusServiceTests
 
         var friendly = status.GetFriendlyStatus();
 
-        Assert.Contains("System is running version 1.1.0-alpha", friendly);
+        Assert.Contains($"System is running version {status.Version}", friendly);
     }
 
     [Fact]

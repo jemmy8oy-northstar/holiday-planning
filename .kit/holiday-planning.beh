@@ -1,0 +1,145 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# holiday-planning — a group holiday decision app. Onboarded 2026-10-29.
+#
+#   "Can we onboard holiday app onto kit, I am going to add this with my first
+#   test user. This will be a shared repo so my bot can actually pick up the new
+#   items. Will have to implement a different mechanism for the testers own
+#   projects. Ai api most likely"
+#                                     — his note in Kit, 2026-10-29 08:09Z
+#
+# Read at holiday-planning@dev a050752 (dev and main were both read; dev is ahead
+# and is where work lands). What exists is a .NET backend only: the Compromise
+# Engine (a deterministic scorer that ranks holiday options against a group's
+# preferences and dealbreakers) behind four trip routes and a status route.
+# docs/DESIGN.md is the product spec it was built from. The frontend is still the
+# unmodified web-template placeholder (one Home page, no holiday screens), so no
+# behaviour below is a page and none is invented for one.
+#
+#   DEFINED   — his words. Cites the note.
+#   INFERRED  — what the backend already does, read off the code. Cites file:line.
+#               Each is `review unreviewed`, so it shows in Proposed and he can
+#               deny it.
+#
+# Not here, on purpose: the chat decision feed, reactions, auth, real flight/hotel
+# data and LLM features. docs/DESIGN.md sketches them as later slices; he has not
+# asked for them in Kit, so they are not behaviours yet.
+#
+# Promotion to main stays his: no grant names this project.
+#
+# kit:repo jemmy8oy-northstar/holiday-planning@dev
+#   BEH-HEALTH-1: where this app's tests live. Hosted Kit reads them from there to count coverage.
+# ─────────────────────────────────────────────────────────────────────────────
+
+feature FEAT-PROJECT "How this project is worked"
+  stage development
+feature FEAT-TRIP "Trips and the people in them"
+  stage development
+feature FEAT-ENGINE "The Compromise Engine: ranked options with reasons"
+  stage development
+feature FEAT-STATUS "What the service says about itself"
+  stage development
+
+
+# ═══ DEFINED — his notes ═══
+
+behaviour BEH-SHARE-1 "The project is shared with his first test user, and the bot picks up its items like any Kit project"
+  in FEAT-PROJECT
+  layer technical
+  source defined kit.notes.md#2026-10-29-0809
+  review approved
+  priority 2
+  actor owner
+  contract "This will be a shared repo so my bot can actually pick up the new items"
+  contract my assumption: the test user's items on this repo reach the bot the way any Kit project's do, through the Kit spec and its Queue
+  contract not built here: "Will have to implement a different mechanism for the testers own projects. Ai api most likely" is about the tester's own projects, which are not this repo, and is left for him to spec
+  contract my reading of the answer posted on 2026-11-02 at 17:53Z (holiday-planning.notes.md#2026-11-02-1753): it is the chat agent's summary of this card, posted from the chat, not an answer to whether the access was given, so the question below stands with its default
+  contract built 2026-11-05, his default taken on silence: the bot half is done (holiday-planning is on Kit and its Queue reaches the bot); giving his test user access to the repo and to Kit stays his, off the board
+
+
+# ═══ INFERRED — what the backend already does ═══
+
+behaviour BEH-TRIP-1 "A person creates a trip by giving it a name"
+  in FEAT-TRIP
+  source inferred backend/HolidayPlanning.WebApi/Routes/TripRoutes.cs:19
+  review unreviewed
+  priority 4
+  actor traveller
+  contract POST /api/trips returns 201 with the new trip's id, name and creation time
+  contract a blank name is refused with 400; the name is trimmed before it is stored
+
+behaviour BEH-TRIP-2 "A person adds a member to a trip with their vibe preferences and dealbreakers"
+  in FEAT-TRIP
+  source inferred backend/HolidayPlanning.WebApi/Routes/TripRoutes.cs:44
+  review unreviewed
+  priority 4
+  actor traveller
+  contract POST /api/trips/{id}/members takes a display name, vibe weights and dealbreakers; a blank display name is refused with 400
+  contract a trip that does not exist answers 404
+  contract the three dealbreaker types are budget_per_person_above, travel_hours_above and must_have_vibe; any other type is ignored when scoring
+
+behaviour BEH-TRIP-3 "A person reads a trip and sees its members"
+  in FEAT-TRIP
+  source inferred backend/HolidayPlanning.WebApi/Routes/TripRoutes.cs:30
+  review unreviewed
+  priority 4
+  actor traveller
+  contract GET /api/trips/{id} returns the trip with its members; a trip that does not exist answers 404
+
+behaviour BEH-REC-1 "A trip's recommendations rank every option, viable ones first and blocked ones after"
+  in FEAT-ENGINE
+  source inferred backend/HolidayPlanning.Services/RecommendationService.cs:27
+  review unreviewed
+  priority 4
+  actor traveller
+  contract GET /api/trips/{id}/recommendations scores every catalog option against all members; viable options come by group score descending, then blocked ones by group score descending
+  contract a blocked option is never dropped, so the group can see what a relaxed constraint would unlock
+  contract a trip that does not exist answers 404
+
+behaviour BEH-REC-2 "A dealbreaker vetoes an option for that member and blocks it for the group"
+  in FEAT-ENGINE
+  source inferred backend/HolidayPlanning.Services/OptionScoringService.cs:103
+  review unreviewed
+  priority 4
+  actor traveller
+  contract a member's fit is 0 and the option is blocked when the cost per person is over their budget, the travel is longer than their limit, or an option's intensity for their must-have vibe is under 0.5 (exactly 0.5 passes)
+  contract the first failing dealbreaker gives the reason, which names the member and the numbers
+
+behaviour BEH-REC-3 "A member's fit blends how well the vibes match with how comfortable the budget is"
+  in FEAT-ENGINE
+  source inferred backend/HolidayPlanning.Services/OptionScoringService.cs:56
+  review unreviewed
+  priority 4
+  actor traveller
+  contract fit is 0.7 x vibe match plus 0.3 x budget comfort; vibe match is the weighted average of the option's vibe intensities under the member's weights
+  contract budget comfort is the headroom under the member's budget, clamped to 0..1; a member with no stated vibes or no budget is neutral at 0.5
+
+behaviour BEH-REC-4 "The group score favours options everyone likes over options some love and one hates"
+  in FEAT-ENGINE
+  source inferred backend/HolidayPlanning.Services/OptionScoringService.cs:191
+  review unreviewed
+  priority 4
+  actor traveller
+  contract group score is 0.6 x the mean of member fits plus 0.4 x the lowest member fit; a vetoed member counts as 0
+
+behaviour BEH-REC-5 "Every recommendation explains each member's fit in words"
+  in FEAT-ENGINE
+  source inferred backend/HolidayPlanning.Services/OptionScoringService.cs:77
+  review unreviewed
+  priority 4
+  actor traveller
+  contract each member fit carries reasons: the top two matching vibes, a neutral note when they stated none, or the veto reason
+
+behaviour BEH-REC-6 "The options come from a built-in catalog of ten example destinations"
+  in FEAT-ENGINE
+  source inferred backend/HolidayPlanning.Services/OptionCatalogService.cs:16
+  review unreviewed
+  priority 4
+  actor traveller
+  contract the catalog is fixed in code (Crete to Bali) with per-person GBP cost, travel hours, nights and vibe intensities; it is dummy data and is not stored
+
+behaviour BEH-STATUS-1 "GET /api/status says which version is running and how it is doing"
+  in FEAT-STATUS
+  source inferred backend/HolidayPlanning.WebApi/Routes/StatusRoutes.cs:13
+  review unreviewed
+  priority 4
+  actor engineer
